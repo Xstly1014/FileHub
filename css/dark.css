@@ -1,0 +1,38 @@
+/* ===================================================================
+   FileHub · 深色主题（通过 :root[data-theme="dark"] 重写设计 Token）
+   仅覆盖硬编码表面色 + 重定义 Token 变量，组件自动跟随
+   =================================================================== */
+:root[data-theme="dark"] {
+  --ink: #f5f5f7;
+  --search-bg: #2c2c2e;
+  --avatar-bg: #3a3a3c;
+  --blue: #4ea1ff;           /* 深底下提亮交互色 */
+  --blue-hover: #6fb4ff;
+  --sidebar-bg: #1c1c1e;
+  --workspace-bg: #161618;
+  --node-bg: #2c2c2e;
+  --border: #3a3a3c;
+  --tag-blue-bg: #1f4f7a;
+  --tag-gray-bg: #343438;
+  --text-2: #9a9a9a;
+  --text-body: #d0d0d2;
+  --code-bg: #0e0e10;
+  --code-text: #cccccc;
+}
+
+/* 硬编码表面色覆盖 */
+:root[data-theme="dark"] .app { background: #1c1c1e; }
+:root[data-theme="dark"] .preview { background: #232325; }
+:root[data-theme="dark"] .editor { background: #1c1c1e; }
+:root[data-theme="dark"] .toolbar { background: #232325; }
+:root[data-theme="dark"] .node .handle { background: #2c2c2e; }
+:root[data-theme="dark"] .modal { background: #2c2c2e; }
+:root[data-theme="dark"] .ver-item:hover { background: #2a2a2c; }
+:root[data-theme="dark"] .md code.inline { color: var(--ink); }
+:root[data-theme="dark"] .set-row select,
+:root[data-theme="dark"] .set-row input { background: #1c1c1e; }
+:root[data-theme="dark"] .sb-workspace-select select,
+:root[data-theme="dark"] .sb-actions button { background: var(--node-bg); color: var(--ink); }
+:root[data-theme="dark"] .sb-actions button:first-child { background: var(--blue); color: #fff; }
+:root[data-theme="dark"] kbd { background: #343438; }
+:root[data-theme="dark"] html, body { background: #0e0e10; }

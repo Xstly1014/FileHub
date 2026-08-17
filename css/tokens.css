@@ -1,0 +1,41 @@
+/* ===================================================================
+   FileHub · 设计 Token（严格对齐 Ardot 设计稿 template 00002 / Apple 风）
+   =================================================================== */
+:root {
+  /* 色彩 */
+  --ink: #1d1d1f;            /* 主文字 / 顶部栏底 */
+  --search-bg: #2a2a2c;      /* 顶栏搜索框底 */
+  --avatar-bg: #3a3a3c;      /* 头像底 */
+  --blue: #0066cc;           /* 唯一交互色 Action Blue */
+  --blue-hover: #005bb8;
+  --sidebar-bg: #f5f5f7;     /* 左侧栏底 */
+  --workspace-bg: #fafafc;   /* 中央画布底 */
+  --node-bg: #ffffff;        /* 节点 / 卡片底 */
+  --border: #e0e0e0;         /* 描边 / 分隔线 */
+  --tag-blue-bg: #e6f0fb;    /* 蓝色标签底 */
+  --tag-gray-bg: #f0f0f0;    /* 灰色标签底 */
+  --text-2: #7a7a7a;         /* 次级文字 */
+  --text-body: #333333;      /* 正文 */
+  --code-bg: #1d1d1f;        /* 代码块底 */
+  --code-text: #cccccc;      /* 代码文字 */
+
+  /* 圆角 */
+  --r-pill: 9999px;
+  --r-card: 12px;
+  --r-sm: 8px;
+
+  /* 字体 */
+  --font: 'Inter', -apple-system, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  /* 默认侧栏高亮定位（全部文件项） */
+  --sb-hl-top: 70px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: #d9d9de;
+}

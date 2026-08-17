@@ -1,0 +1,205 @@
+/* ===================================================================
+   FileHub · 动效 / 交互设计系统（叠加层，最后加载，优先级最高）
+   设计意图：流体级 Motion（≈6），单一去饱和强调色，真实触感反馈。
+   拒绝：霓虹 / 玻璃拟态滥用 / 渐变球 / 一眼 AI 套路。
+   尊重：prefers-reduced-motion（系统开启减弱动效时自动降级）。
+   =================================================================== */
+
+/* ---------------- 动效 Token ---------------- */
+:root {
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);     /* 标准缓动 */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);    /* 出口缓动，用于进场 */
+  --ease-spring:   cubic-bezier(0.34, 1.4, 0.64, 1); /* 轻度回弹，仅用于小元素 */
+  --dur-1: 140ms;
+  --dur-2: 220ms;
+  --dur-3: 340ms;
+  --dur-4: 520ms;
+}
+
+/* ---------------- 应用外框：从"画板"变"活的应用" ---------------- */
+.app {
+  box-shadow:
+    0 1px 2px rgba(20, 22, 28, 0.04),
+    0 18px 48px rgba(20, 22, 28, 0.12);
+  border: 1px solid rgba(20, 22, 28, 0.06);
+  animation: appIn var(--dur-4) var(--ease-out) both;
+}
+/* 仅淡入，保留 .app 的响应式 transform:scale，避免动画覆盖缩放 */
+@keyframes appIn {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+
+/* 底板：极轻的中性过渡，不引入彩色，避免"花里胡哨" */
+html, body { background: #e9eaee; }
+
+/* ---------------- 视图切换：路由进场（淡入 + 轻微上浮） ---------------- */
+.view-enter { animation: viewIn var(--dur-3) var(--ease-out) both; }
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------------- 遮罩 / 弹窗 / 面板：从硬切换改为淡入 + 缩放 ----------------
+   关键：用 visibility + opacity + transform 代替 display 硬切换，
+   这样过渡才生效；显示态由 .show 触发。 */
+.modal-mask, .cmd-mask, .onboard-mask {
+  display: flex;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-2) var(--ease-standard),
+    visibility 0s linear var(--dur-2);
+}
+.modal-mask.show, .cmd-mask.show, .onboard-mask.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--dur-2) var(--ease-standard);
+}
+.modal, .cmd, .onboard-card {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0;
+  transition:
+    transform var(--dur-2) var(--ease-out),
+    opacity   var(--dur-2) var(--ease-standard),
+    background-color var(--dur-2) var(--ease-standard),
+    border-color     var(--dur-2) var(--ease-standard);
+}
+.modal-mask.show .modal,
+.cmd-mask.show .cmd,
+.onboard-mask.show .onboard-card {
+  transform: none;
+  opacity: 1;
+}
+
+/* 通知面板：右上角轻微下落展开 */
+.notif {
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px) scale(0.98);
+  transform-origin: top right;
+  transition:
+    opacity   var(--dur-2) var(--ease-standard),
+    transform var(--dur-2) var(--ease-out),
+    visibility 0s linear var(--dur-2),
+    background-color var(--dur-2) var(--ease-standard),
+    border-color     var(--dur-2) var(--ease-standard);
+}
+.notif.show {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity   var(--dur-2) var(--ease-standard),
+    transform var(--dur-2) var(--ease-out);
+}
+
+/* Toast 缓动统一（原逻辑已是淡入，这里仅换曲线） */
+.toast { transition: opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-out); }
+
+/* ---------------- 主题切换：表面色平滑过渡 ---------------- */
+.sidebar, .topbar, .preview, .editor, .info-panel {
+  transition:
+    background-color var(--dur-2) var(--ease-standard),
+    border-color     var(--dur-2) var(--ease-standard),
+    color            var(--dur-2) var(--ease-standard);
+}
+
+/* ---------------- 按钮 / 图标：触感反馈（抬起 + 按压回弹） ---------------- */
+.btn, .lab-btn, .upload-btn {
+  transition:
+    background-color var(--dur-2) var(--ease-standard),
+    transform var(--dur-1) var(--ease-standard),
+    box-shadow var(--dur-2) var(--ease-standard);
+}
+.btn.primary:hover, .lab-btn.primary:hover, .upload-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 102, 204, 0.22);
+}
+.btn.ghost:hover { background: #e8e8ec; }
+.btn:active, .lab-btn:active, .upload-btn:active { transform: translateY(0) scale(0.97); }
+
+.icon-btn {
+  transition: background-color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+}
+.icon-btn:hover { transform: translateY(-1px); }
+.icon-btn:active { transform: scale(0.92); }
+
+.upload-btn { transition: background-color var(--dur-2) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard); }
+
+/* 顶部导航激活态：轻微背景过渡已由原规则覆盖，统一缓动 */
+.top-link { transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard); }
+
+/* ---------------- 文件节点：悬停抬起 + 选中环保留 ---------------- */
+.node {
+  transition:
+    box-shadow var(--dur-2) var(--ease-standard),
+    border-color var(--dur-2) var(--ease-standard),
+    transform var(--dur-2) var(--ease-standard);
+}
+.node:not(.selected):hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(20, 22, 28, 0.10); }
+.node.selected { box-shadow: 0 0 0 2px var(--blue); }
+.node.selected:hover { box-shadow: 0 0 0 2px var(--blue), 0 10px 24px rgba(20, 22, 28, 0.10); }
+
+/* 实验室卡片：缓动统一为出口曲线 */
+.lab-card { transition: transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard); }
+.lab-card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(20, 22, 28, 0.12); }
+
+/* ---------------- 侧栏导航高亮：回弹滑动（配合 app.js 动态定位） ---------------- */
+.sb-hl {
+  transition:
+    top var(--dur-2) var(--ease-spring),
+    opacity var(--dur-1) var(--ease-standard);
+}
+.sb-nav {
+  transition:
+    color var(--dur-1) var(--ease-standard),
+    background-color var(--dur-1) var(--ease-standard);
+}
+.sb-nav:hover { background: rgba(20, 22, 28, 0.05); color: var(--ink); }
+
+/* ---------------- 通知红点：呼吸（仅在未读时显示） ---------------- */
+.badge-dot { animation: pulse 2.4s var(--ease-standard) infinite; }
+@keyframes pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%      { transform: scale(1.5); opacity: 0.5; }
+}
+
+/* ---------------- 骨架屏微光（用于加载占位，替代生硬 spinner） ---------------- */
+.skeleton {
+  background: linear-gradient(90deg, var(--tag-gray-bg) 25%, #f6f6f8 37%, var(--tag-gray-bg) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes shimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ---------------- 通用：列表项轻微进场（按需挂在容器上） ---------------- */
+.stagger > * { animation: itemIn var(--dur-3) var(--ease-out) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(6) { animation-delay: 200ms; }
+.stagger > *:nth-child(7) { animation-delay: 240ms; }
+.stagger > *:nth-child(8) { animation-delay: 280ms; }
+.stagger > *:nth-child(n+9) { animation-delay: 320ms; }
+@keyframes itemIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------------- 减弱动效：系统级无障碍降级 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FileHub · 可视化文件管理工作区</title>
+  <link rel="stylesheet" href="css/tokens.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/workspace.css" />
+  <link rel="stylesheet" href="css/detail.css" />
+  <link rel="stylesheet" href="css/features.css" />
+  <link rel="stylesheet" href="css/dark.css" />
+  <link rel="stylesheet" href="css/motion.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+</head>
+<body>
+  <div class="app" id="app">
+
+    <!-- ===================== 顶部导航栏（共用） ===================== -->
+    <header class="topbar">
+      <div class="logo">FileHub · 可视化文件管理工作区</div>
+      <button class="icon-btn sidebar-toggle" id="sidebarToggle" title="收起或展开侧边栏" aria-label="收起或展开侧边栏">☰</button>
+      <nav class="top-nav">
+        <a class="top-link active" data-route="#/">工作区</a>
+        <a class="top-link" data-route="#/lab">功能实验室</a>
+      </nav>
+      <div class="search">
+        <input type="text" id="globalSearch" placeholder="搜索文件、标签或 AI 内容…" />
+      </div>
+      <div class="right-area">
+        <div class="icon-btn" id="themeToggle" title="切换深色 / 浅色">🌙</div>
+        <div class="icon-btn" id="bellBtn" title="通知中心">🔔<span class="badge-dot" id="bellDot"></span></div>
+        <div class="icon-btn" id="cmdBtn" title="命令面板 (Ctrl/Cmd + K)">⌘K</div>
+        <div class="icon-btn" id="exportBtn" title="导出 / 备份">⤓</div>
+        <div class="upload-btn">上传文件</div>
+        <div class="avatar" title="用户菜单">U</div>
+      </div>
+    </header>
+
+    <!-- ===================== 左侧栏（共用 · 流体布局） ===================== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-head">
+        <div class="sb-title">工作区</div>
+        <span class="sb-live" title="Docker API 已连接"></span>
+      </div>
+      <div class="sb-workspace-select">
+        <select id="workspaceSelect" aria-label="切换工作区"><option>正在加载工作区…</option></select>
+      </div>
+      <div class="sb-actions">
+        <button id="sbNewFile">＋ 新建</button>
+        <button id="sbAiChat">AI 问答</button>
+      </div>
+      <div class="sb-scroll">
+        <div class="sb-hl"></div>
+        <div class="sb-group">资源管理</div>
+        <div class="sb-nav active" data-filter="all"><span>全部文件</span><b data-count="all">0</b></div>
+        <div class="sb-nav" data-filter="recent"><span>最近更新</span><b data-count="recent">0</b></div>
+        <div class="sb-nav" data-filter="fav"><span>收藏夹</span><b data-count="fav">0</b></div>
+
+        <div class="sb-group">分类</div>
+        <div class="sb-nav" data-type-group="document"><span>文档</span><b data-count="document">0</b></div>
+        <div class="sb-nav" data-type-group="image"><span>图片</span><b data-count="image">0</b></div>
+        <div class="sb-nav" data-type-group="code"><span>代码与数据</span><b data-count="code">0</b></div>
+        <div class="sb-nav" data-type-group="folder"><span>文件夹</span><b data-count="folder">0</b></div>
+
+        <div class="sb-group sb-group-row"><span>热门标签</span><button id="sbRefreshTags" title="刷新标签">↻</button></div>
+        <div class="sb-tags" id="sbTags"><span class="sb-muted">正在统计…</span></div>
+
+        <div class="sb-group">知识视图</div>
+        <div class="sb-nav sb-route" data-route-to="#/lab/graph"><span>关系图谱</span><b>⌘G</b></div>
+        <div class="sb-nav sb-route" data-route-to="#/lab/timeline"><span>活动时间线</span><b>⌘T</b></div>
+        <div class="sb-nav sb-route" data-route-to="#/lab/health"><span>资料健康度</span><b id="sbHealthScore">—</b></div>
+
+        <div class="sb-group">其它</div>
+        <div class="sb-nav" id="trashNav"><span>回收站</span><b data-count="trash">0</b></div>
+      </div>
+      <div class="sb-foot"><span>本地存储</span><strong id="sbStorage">D 盘 · 正常</strong></div>
+    </aside>
+
+    <!-- ===================== 视图容器（路由切换区） ===================== -->
+    <main class="view-container" id="view"></main>
+
+    <!-- ===================== 上传弹窗 ===================== -->
+    <div class="modal-mask" id="uploadModal">
+      <div class="modal">
+        <span class="modal-close" title="关闭">×</span>
+        <h3>上传文件到工作区</h3>
+        <p class="sub">支持拖拽或点击选择 · 文件将保存到 D 盘并建立全文索引</p>
+        <div class="dropzone">
+          <div class="big">⬆</div>
+          <div>将文件拖到此处，或点击选择</div>
+        </div>
+        <div class="formats">
+          <span class="fmt">PDF</span>
+          <span class="fmt">Markdown</span>
+          <span class="fmt">Word</span>
+          <span class="fmt">PNG</span>
+          <span class="fmt">文件夹</span>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost">取消</button>
+          <button class="btn primary" id="addSampleBtn">创建 Markdown 文件</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 命令面板 ⌘K ===================== -->
+    <div class="cmd-mask" id="cmdPalette">
+      <div class="cmd">
+        <input id="cmdInput" placeholder="输入命令或搜索…  (↑↓ 选择 · ↵ 执行 · Esc 关闭)" />
+        <div class="cmd-list" id="cmdList"></div>
+      </div>
+    </div>
+
+    <!-- ===================== 设置中心 ===================== -->
+    <div class="modal-mask" id="settingsModal">
+      <div class="modal">
+        <span class="modal-close" id="settingsClose">×</span>
+        <h3>设置</h3>
+        <p class="sub">偏好保存在本地（D 盘 / localStorage）</p>
+        <div class="set-row"><span>主题外观</span>
+          <select id="setTheme"><option value="light">浅色</option><option value="dark">深色</option></select>
+        </div>
+        <div class="set-row"><span>AI 模型</span>
+          <select id="setModel"><option>deepseek-v4-pro</option><option>本地降级模型</option></select>
+        </div>
+        <div class="set-row"><span>存储路径</span>
+          <input value="D:\WorkSpace-java\workbuddy\filehub" readonly />
+        </div>
+        <div class="set-row"><span>界面密度</span>
+          <select id="setDensity"><option>舒适</option><option>紧凑</option></select>
+        </div>
+        <div class="modal-actions"><button class="btn ghost" id="settingsCancel">关闭</button></div>
+      </div>
+    </div>
+
+    <!-- ===================== 快捷键体系 ===================== -->
+    <div class="modal-mask" id="shortcutsModal">
+      <div class="modal">
+        <span class="modal-close" id="shortcutsClose">×</span>
+        <h3>键盘快捷键</h3>
+        <div class="kb-list" id="kbList"></div>
+        <div class="modal-actions"><button class="btn ghost" id="shortcutsCancel">关闭</button></div>
+      </div>
+    </div>
+
+    <!-- ===================== 回收站 ===================== -->
+    <div class="modal-mask" id="trashModal">
+      <div class="modal">
+        <span class="modal-close" id="trashClose">×</span>
+        <h3>回收站</h3>
+        <p class="sub">删除的文件暂存于此，可恢复或彻底删除</p>
+        <div id="trashList" class="trash-list"></div>
+        <div class="modal-actions"><button class="btn ghost" id="trashCancel">关闭</button></div>
+      </div>
+    </div>
+
+    <!-- ===================== 通知中心 ===================== -->
+    <div class="notif" id="notifPanel">
+      <div class="notif-head">通知中心</div>
+      <div id="notifList" class="notif-list"></div>
+    </div>
+
+    <!-- ===================== 新手引导 ===================== -->
+    <div class="onboard-mask" id="onboard">
+      <div class="onboard-card">
+        <div class="onboard-title" id="onboardTitle">欢迎来到 FileHub</div>
+        <div class="onboard-step" id="onboardStep"></div>
+        <div class="onboard-actions">
+          <button class="btn ghost" id="onboardSkip">跳过</button>
+          <button class="btn primary" id="onboardNext">下一步</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== Toast ===================== -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- ===================== 脚本（按依赖顺序加载，全部 D 盘本地资源） ===================== -->
+  <script src="js/data.js?v=5"></script>
+  <script src="js/labdata.js?v=5"></script>
+  <script src="js/api.js?v=5"></script>
+  <script src="js/ai.js?v=5"></script>
+  <script src="js/router.js?v=5"></script>
+  <script src="js/workspace.js?v=5"></script>
+  <script src="js/detail.js?v=5"></script>
+  <script src="js/features.js?v=6"></script>
+  <script src="js/feature-api.js?v=6"></script>
+  <script src="js/app.js?v=8"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(function () {});</script>
+</body>
+</html>

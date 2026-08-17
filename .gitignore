@@ -1,0 +1,41 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Runtime data must remain local on D drive
+runtime/
+backend/runtime/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# JavaScript and editor artifacts
+node_modules/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build and test output
+dist/
+build/
+coverage/
+htmlcov/
+*.tmp
+*.bak

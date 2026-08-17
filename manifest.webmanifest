@@ -1,0 +1,9 @@
+{
+  "name": "FileHub",
+  "short_name": "FileHub",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fafafc",
+  "theme_color": "#1d1d1f",
+  "icons": []
+}

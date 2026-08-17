@@ -1,0 +1,120 @@
+/* ===================================================================
+   FileHub · 功能实验室（画廊 + 20 个可交互原型）
+   统一复用 tokens.css 设计变量，保持 Apple 风视觉语言
+   =================================================================== */
+
+.lab-wrap { position: absolute; inset: 0; overflow-y: auto; padding: 28px 32px 48px; background: var(--workspace-bg); }
+.lab-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.lab-back { font-size: 13px; color: var(--blue); cursor: pointer; font-weight: 600; user-select: none; }
+.lab-back:hover { text-decoration: underline; }
+.lab-title { font-size: 22px; font-weight: 600; color: var(--ink); }
+.lab-cat { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 9999px; }
+.lab-cat.创意 { background: var(--tag-blue-bg); color: var(--blue); }
+.lab-cat.必备 { background: var(--tag-gray-bg); color: var(--text-2); }
+.lab-desc { font-size: 14px; color: var(--text-body); margin: 4px 0 18px; line-height: 1.6; }
+.lab-goal { background: var(--tag-blue-bg); color: var(--ink); border-radius: 12px; padding: 14px 16px; font-size: 13px; line-height: 1.6; margin-bottom: 14px; }
+.lab-goal b { color: var(--blue); }
+.lab-logic { background: var(--node-bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; }
+.lab-logic .ll-title { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
+.lab-logic ol { margin: 0; padding-left: 20px; color: var(--text-body); font-size: 13px; line-height: 1.8; }
+.lab-demo { background: var(--node-bg); border: 1px solid var(--border); border-radius: 14px; padding: 18px; min-height: 360px; position: relative; overflow: hidden; }
+
+/* 画廊 */
+.lab-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 1050px) { .lab-grid { grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width: 680px) {
+  .lab-wrap { padding:20px 16px 36px; }
+  .lab-grid { grid-template-columns:1fr; }
+  .lab-demo { padding:12px; }
+  .lab-panel { position:relative; width:100%; height:auto; border-left:0; border-top:1px solid var(--border); margin-top:12px; }
+}
+.lab-section-title { font-size: 14px; font-weight: 600; color: var(--text-2); margin: 22px 0 12px; letter-spacing: .3px; }
+.lab-card { background: var(--node-bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+.lab-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,.10); }
+.lab-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.lab-card-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.lab-card-desc { font-size: 12.5px; color: var(--text-body); line-height: 1.6; min-height: 56px; }
+.lab-card-foot { margin-top: 10px; font-size: 11px; color: var(--text-2); }
+
+/* 通用迷你控件 */
+.lab-btn { height: 34px; border-radius: 9999px; padding: 0 16px; font-size: 13px; cursor: pointer; border: none; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+.lab-btn.primary { background: var(--blue); color: #fff; }
+.lab-btn.primary:hover { background: var(--blue-hover); }
+.lab-btn.ghost { background: var(--tag-gray-bg); color: var(--text-body); }
+.lab-btn:disabled { opacity: .5; cursor: default; }
+.lab-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.lab-label { font-size: 13px; color: var(--text-body); font-weight: 600; }
+
+/* 迷你画布（原型内复用的 840x520 区域） */
+.mini-canvas { position: relative; width: 100%; height: 460px; background: var(--workspace-bg); border: 1px dashed var(--border); border-radius: 12px; overflow: hidden; }
+.mini-node { position: absolute; width: 120px; height: 74px; background: var(--node-bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; cursor: grab; user-select: none; font-size: 12px; }
+.mini-node:active { cursor: grabbing; }
+.mini-node .mn-badge { display: inline-block; font-size: 10px; font-weight: 600; color: var(--blue); background: var(--tag-blue-bg); border-radius: 9999px; padding: 1px 7px; margin-bottom: 4px; }
+.mini-node .mn-name { font-size: 12.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini-node .mn-meta { font-size: 10.5px; color: var(--text-2); }
+.mini-node.selected { box-shadow: 0 0 0 2px var(--blue); border-color: var(--blue); }
+.mini-node.dim { opacity: .25; }
+.mini-links { position: absolute; inset: 0; pointer-events: none; }
+.mini-links path { stroke: var(--blue); stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+
+/* 侧栏面板（推荐 / 反向链接 / 标签） */
+.lab-panel { position: absolute; top: 0; right: 0; width: 240px; height: 100%; background: var(--node-bg); border-left: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+.lab-panel h4 { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 10px; }
+.sug-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 8px; }
+.sug-item .si-top { display: flex; justify-content: space-between; align-items: center; }
+.sug-item .si-name { font-size: 13px; font-weight: 600; color: var(--ink); }
+.sug-item .si-sim { font-size: 12px; color: var(--blue); font-weight: 600; }
+.sim-bar { height: 5px; background: var(--tag-gray-bg); border-radius: 9999px; margin: 8px 0; overflow: hidden; }
+.sim-bar > i { display: block; height: 100%; background: var(--blue); }
+
+/* 聊天 */
+.lab-chat { display: flex; flex-direction: column; height: 420px; }
+.lab-msgs { flex: 1; overflow-y: auto; padding: 8px 4px; display: flex; flex-direction: column; gap: 12px; }
+.lab-msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; }
+.lab-msg.q { align-self: flex-end; background: var(--blue); color: #fff; border-bottom-right-radius: 3px; }
+.lab-msg.a { align-self: flex-start; background: var(--tag-gray-bg); color: var(--ink); border-bottom-left-radius: 3px; }
+.lab-refs { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.lab-ref { font-size: 11px; background: var(--tag-blue-bg); color: var(--blue); border-radius: 9999px; padding: 2px 9px; cursor: pointer; font-weight: 600; }
+.lab-input-row { display: flex; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+.lab-input { flex: 1; height: 38px; border: 1px solid var(--border); border-radius: 9999px; padding: 0 14px; font-family: inherit; font-size: 13px; outline: none; background: var(--node-bg); color: var(--ink); }
+.lab-input:focus { border-color: var(--blue); }
+
+/* 便签 */
+.lab-sticky { position: absolute; width: 150px; min-height: 90px; background: #fff4c2; border-radius: 8px; padding: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.12); font-size: 12px; color: #5b4b00; cursor: grab; }
+.lab-sticky:active { cursor: grabbing; }
+.lab-sticky .st-del { position: absolute; top: 4px; right: 6px; cursor: pointer; color: #b08a00; font-weight: 700; }
+.lab-sticky .st-at { color: #0066cc; font-weight: 600; }
+
+/* 小地图 */
+.lab-minimap { position: absolute; right: 12px; bottom: 12px; width: 150px; height: 100px; background: rgba(255,255,255,.7); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.lab-minimap .mm-node { position: absolute; width: 8px; height: 8px; background: var(--blue); border-radius: 2px; }
+.lab-minimap .mm-view { position: absolute; border: 2px solid var(--blue); border-radius: 2px; }
+
+/* 健康度 / 评分 */
+.score-badge { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 9999px; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.dim-bar { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12px; color: var(--text-body); }
+.dim-bar .db-label { width: 56px; }
+.dim-bar .db-track { flex: 1; height: 6px; background: var(--tag-gray-bg); border-radius: 9999px; overflow: hidden; }
+.dim-bar .db-track > i { display: block; height: 100%; background: var(--blue); }
+
+/* 切换 / 权限 */
+.lab-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-body); }
+.switch { width: 42px; height: 24px; border-radius: 9999px; background: var(--tag-gray-bg); position: relative; cursor: pointer; transition: background .15s; }
+.switch.on { background: var(--blue); }
+.switch > i { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 9999px; background: #fff; transition: left .15s; }
+.switch.on > i { left: 21px; }
+.lab-link-box { background: var(--tag-gray-bg); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--ink); font-family: var(--mono); word-break: break-all; margin: 8px 0; }
+
+/* 图谱 */
+.graph-svg { width: 100%; height: 100%; }
+.graph-node { cursor: pointer; }
+.graph-node circle { fill: var(--node-bg); stroke: var(--blue); stroke-width: 2; }
+.graph-node text { font-size: 11px; fill: var(--ink); text-anchor: middle; }
+
+/* 通用小工具 */
+.lab-flashi { animation: labFlash .9s ease; }
+@keyframes labFlash { 0%,100% { box-shadow: 0 0 0 0 transparent; } 30% { box-shadow: 0 0 0 4px var(--blue); } }
+.lab-hint { font-size: 12px; color: var(--text-2); margin-top: 10px; line-height: 1.6; }
+.lab-pill { font-size: 11px; padding: 3px 9px; border-radius: 9999px; background: var(--tag-gray-bg); color: var(--text-2); cursor: pointer; }
+.lab-pill.on { background: var(--tag-blue-bg); color: var(--blue); }
+.lab-mark { background: #fff3a0; border-radius: 3px; padding: 0 2px; }

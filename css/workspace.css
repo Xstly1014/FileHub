@@ -1,0 +1,126 @@
+/* ===================================================================
+   FileHub · 视图一 工作区（画布 + 关联连线 + 右侧预览面板）
+   =================================================================== */
+
+/* 画布 */
+.canvas {
+  position: absolute; top: 0; left: 0;
+  width: calc(100% - 340px); height: 100%;
+  background: var(--workspace-bg);
+  overflow: auto;
+}
+.canvas-stage { position:relative; width:840px; height:844px; min-width:840px; min-height:844px; }
+.ws-title {
+  position: absolute; left: 32px; top: 28px;
+  font-size: 21px; font-weight: 600; color: var(--ink);
+}
+.ws-hint {
+  position: absolute; left: 32px; top: 62px;
+  font-size: 13px; font-weight: 400; color: var(--text-2);
+}
+
+/* 关联连线 SVG 层 */
+.links-svg {
+  position: absolute; left: 0; top: 0;
+  width: 840px; height: 100%;
+  pointer-events: none;
+  z-index: 11;
+}
+.links-svg path.link-hit { stroke: transparent; stroke-width: 14; fill: none; pointer-events: stroke; cursor: pointer; }
+.links-svg path.link-line { stroke: var(--blue); stroke-width: 2; fill: none; stroke-dasharray: 6 5; }
+.links-svg circle.link-end { fill: var(--blue); }
+.links-svg path.link-temp { stroke: var(--blue); stroke-width: 2; fill: none; stroke-dasharray: 6 5; opacity: 0.7; }
+
+/* 文件节点 */
+.node {
+  position: absolute;
+  width: 150px; height: 96px;
+  background: var(--node-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  cursor: grab;
+  z-index: 12;
+  user-select: none;
+  transition: box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.node:active { cursor: grabbing; }
+.node.selected { box-shadow: 0 0 0 2px var(--blue); border-color: var(--blue); }
+.node.dim { opacity: 0.28; }
+.node.filtered-out { display: none; }
+.node .badge {
+  position: absolute; left: 12px; top: 12px;
+  width: 44px; height: 20px; border-radius: var(--r-pill);
+  background: var(--tag-blue-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: var(--blue);
+}
+.node .name {
+  position: absolute; left: 12px; top: 44px;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 126px;
+}
+.node .meta {
+  position: absolute; left: 12px; top: 64px;
+  font-size: 11px; font-weight: 400; color: var(--text-2);
+}
+.node .handle {
+  position: absolute; right: -8px; top: 40px;
+  width: 16px; height: 16px; border-radius: var(--r-pill);
+  background: #fff; border: 2px solid var(--blue);
+  opacity: 0; cursor: crosshair; z-index: 13;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.12s ease;
+}
+.node .handle::after { content: ""; width: 6px; height: 6px; border-radius: var(--r-pill); background: var(--blue); }
+.node:hover .handle { opacity: 1; }
+
+/* 右侧预览面板 */
+.preview {
+  position: absolute; top: 0; right:0;
+  width: 340px; height: 100%;
+  background: #fff;
+  border-left: 1px solid var(--border);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  overflow-y: auto;
+}
+.pv-name { max-width:100%; overflow-wrap:anywhere; }
+@media (max-width: 760px) {
+  .canvas { width:100%; padding-bottom:240px; }
+  .preview { top:auto; bottom:0; width:100%; height:230px; border-left:0; border-top:1px solid var(--border); padding:16px; gap:8px; z-index:30; }
+  .preview .pv-summary { max-height:58px; overflow:hidden; }
+  .pv-open { margin-top:0; }
+}
+.pv-icon {
+  width: 48px; height: 48px; border-radius: var(--r-card);
+  background: var(--tag-blue-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600; color: var(--blue);
+}
+.pv-name { font-size: 17px; font-weight: 600; color: var(--ink); }
+.pv-meta { font-size: 12px; font-weight: 400; color: var(--text-2); }
+.pv-divider { width: 100%; height: 1px; background: var(--border); }
+.pv-section-row { width: 100%; display: flex; align-items: center; justify-content: space-between; }
+.pv-section-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.pv-todo-pill {
+  height: 20px; border-radius: var(--r-pill); background: var(--tag-gray-bg);
+  display: flex; align-items: center; padding: 0 8px;
+  font-size: 10px; font-weight: 600; color: var(--text-2);
+}
+.pv-summary { width: 100%; font-size: 13px; font-weight: 400; color: var(--text-body); white-space: pre-line; line-height: 1.6; }
+.pv-todo-note { width: 100%; font-size: 11px; font-weight: 400; color: var(--text-2); line-height: 1.5; }
+.pv-tags { width: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pv-tag { height: 24px; border-radius: var(--r-pill); display: flex; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pv-tag.blue { background: var(--tag-blue-bg); color: var(--blue); }
+.pv-tag.gray { background: var(--tag-gray-bg); color: var(--text-2); }
+.pv-open {
+  width: 100%; height: 40px; border-radius: var(--r-pill);
+  background: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 14px; cursor: pointer; margin-top: auto;
+  transition: background 0.15s ease;
+}
+.pv-open:hover { background: var(--blue-hover); }
