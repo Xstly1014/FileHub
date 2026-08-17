@@ -14,6 +14,12 @@ App.api = (function () {
   function auth() { return localStorage.getItem("fh_access") || ""; }
   function refresh() { return localStorage.getItem("fh_refresh") || ""; }
   function clearSession() { localStorage.removeItem("fh_access"); localStorage.removeItem("fh_refresh"); }
+  function saveSession(t) {
+    localStorage.setItem("fh_access", t.accessToken || "");
+    localStorage.setItem("fh_refresh", t.refreshToken || "");
+    return t;
+  }
+  function requireAuth() { window.dispatchEvent(new CustomEvent("filehub:auth-required")); }
 
   function raw(path, options) {
     options = options || {}; options.headers = options.headers || {};
@@ -33,8 +39,7 @@ App.api = (function () {
       return r.json();
     }).then(function (d) {
       var t = d.data || {};
-      localStorage.setItem("fh_access", t.accessToken || "");
-      localStorage.setItem("fh_refresh", t.refreshToken || "");
+      saveSession(t);
       return t.accessToken;
     });
   }
@@ -61,12 +66,28 @@ App.api = (function () {
         if (refresh()) {
           return refreshOnce().then(function () { return raw(path, options); });
         }
-        if (!auth()) {
-          return demoAuth().then(function () { return raw(path, options); });
-        }
+        if (!auth()) requireAuth();
       }
       return r;
-    }).then(parse);
+    }).then(parse).catch(function (err) {
+      if (!auth()) requireAuth();
+      throw err;
+    });
+  }
+
+  function authRequest(path, body) {
+    return fetch(API + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(parse).then(saveSession);
+  }
+
+  function login(email, password) { return authRequest("/auth/login", { email: email, password: password }); }
+  function register(email, password, displayName) { return authRequest("/auth/register", { email: email, password: password, displayName: displayName }); }
+
+  function logout() {
+    var rt = refresh();
+    if (!auth()) { clearSession(); return Promise.resolve(); }
+    return request("/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refreshToken: rt }) })
+      .catch(function () {}).then(function () { clearSession(); });
   }
 
   function demoAuth() {
@@ -79,9 +100,7 @@ App.api = (function () {
       .then(function (r) { if (!r.ok) throw new Error("authentication failed"); return r.json(); })
       .then(function (d) {
         var t = d.data || {};
-        localStorage.setItem("fh_access", t.accessToken || "");
-        localStorage.setItem("fh_refresh", t.refreshToken || "");
-        return t;
+        return saveSession(t);
       });
   }
 
@@ -93,6 +112,8 @@ App.api = (function () {
 
   return {
     base: API, raw: raw, request: request, demoAuth: demoAuth, upload: upload,
+    hasSession: function () { return !!auth(); }, clearSession: clearSession,
+    login: login, register: register, logout: logout,
     get: function (p) { return request(p); },
     post: function (p, b) { return request(p, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b || {}) }); },
     put: function (p, b) { return request(p, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b || {}) }); },

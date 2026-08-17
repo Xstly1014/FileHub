@@ -7,6 +7,7 @@ COPY server.py ./
 COPY seed.py ./
 COPY acceptance.py ./
 COPY fhapi/ ./fhapi/
+COPY tests/ ./tests/
 
 ENV FILEHUB_RUNTIME_DIR=/app/runtime
 ENV PORT=8787

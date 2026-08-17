@@ -33,6 +33,6 @@
 :root[data-theme="dark"] .set-row input { background: #1c1c1e; }
 :root[data-theme="dark"] .sb-workspace-select select,
 :root[data-theme="dark"] .sb-actions button { background: var(--node-bg); color: var(--ink); }
-:root[data-theme="dark"] .sb-actions button:first-child { background: var(--blue); color: #fff; }
+:root[data-theme="dark"] .sb-actions button { background: var(--tag-blue-bg); color: var(--blue); }
 :root[data-theme="dark"] kbd { background: #343438; }
 :root[data-theme="dark"] html, body { background: #0e0e10; }

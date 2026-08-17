@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FileHub · 可视化文件管理工作区</title>
-  <link rel="stylesheet" href="css/tokens.css" />
-  <link rel="stylesheet" href="css/app.css" />
-  <link rel="stylesheet" href="css/workspace.css" />
-  <link rel="stylesheet" href="css/detail.css" />
-  <link rel="stylesheet" href="css/features.css" />
-  <link rel="stylesheet" href="css/dark.css" />
-  <link rel="stylesheet" href="css/motion.css" />
+  <link rel="stylesheet" href="css/tokens.css?v=12" />
+  <link rel="stylesheet" href="css/app.css?v=12" />
+  <link rel="stylesheet" href="css/workspace.css?v=12" />
+  <link rel="stylesheet" href="css/detail.css?v=12" />
+  <link rel="stylesheet" href="css/features.css?v=12" />
+  <link rel="stylesheet" href="css/dark.css?v=12" />
+  <link rel="stylesheet" href="css/motion.css?v=12" />
   <link rel="manifest" href="manifest.webmanifest" />
 </head>
 <body>
@@ -28,14 +28,26 @@
         <input type="text" id="globalSearch" placeholder="搜索文件、标签或 AI 内容…" />
       </div>
       <div class="right-area">
-        <div class="icon-btn" id="themeToggle" title="切换深色 / 浅色">🌙</div>
-        <div class="icon-btn" id="bellBtn" title="通知中心">🔔<span class="badge-dot" id="bellDot"></span></div>
-        <div class="icon-btn" id="cmdBtn" title="命令面板 (Ctrl/Cmd + K)">⌘K</div>
-        <div class="icon-btn" id="exportBtn" title="导出 / 备份">⤓</div>
-        <div class="upload-btn">上传文件</div>
-        <div class="avatar" title="用户菜单">U</div>
+        <button id="themeToggle" type="button" hidden aria-hidden="true">🌙</button>
+        <button class="icon-btn" id="bellBtn" title="通知中心" aria-label="通知中心">🔔<span class="badge-dot" id="bellDot"></span></button>
+        <button class="upload-btn" type="button">上传文件</button>
+        <button class="icon-btn" id="moreBtn" title="更多操作" aria-label="更多操作">•••</button>
+        <button class="avatar" id="avatarBtn" title="用户菜单" aria-label="用户菜单">U</button>
       </div>
     </header>
+
+    <div class="popover-menu" id="moreMenu">
+      <button data-action="command"><span>⌘</span><b>命令面板</b><kbd>Ctrl K</kbd></button>
+      <button data-action="export"><span>↓</span><b>导出工作区</b></button>
+      <button data-action="shortcuts"><span>?</span><b>快捷键</b></button>
+      <button data-action="settings"><span>⚙</span><b>设置</b></button>
+    </div>
+    <div class="popover-menu user-menu" id="userMenu">
+      <div class="user-menu-head"><span class="user-menu-avatar" id="userMenuAvatar">U</span><div><strong id="userMenuName">用户</strong><small id="userMenuEmail">正在加载…</small></div></div>
+      <button data-action="profile"><span>◎</span><b>账号资料</b></button>
+      <button data-action="settings"><span>⚙</span><b>偏好设置</b></button>
+      <button data-action="logout" class="danger"><span>↪</span><b>退出登录</b></button>
+    </div>
 
     <!-- ===================== 左侧栏（共用 · 流体布局） ===================== -->
     <aside class="sidebar" id="sidebar">
@@ -45,9 +57,9 @@
       </div>
       <div class="sb-workspace-select">
         <select id="workspaceSelect" aria-label="切换工作区"><option>正在加载工作区…</option></select>
+        <button id="workspaceCreateBtn" title="新建工作区" aria-label="新建工作区">＋</button>
       </div>
       <div class="sb-actions">
-        <button id="sbNewFile">＋ 新建</button>
         <button id="sbAiChat">AI 问答</button>
       </div>
       <div class="sb-scroll">
@@ -104,6 +116,21 @@
       </div>
     </div>
 
+    <!-- ===================== 导出工作区 ===================== -->
+    <div class="modal-mask" id="exportModal">
+      <div class="modal export-modal">
+        <span class="modal-close" id="exportClose" title="关闭">×</span>
+        <h3>导出工作区</h3>
+        <p class="sub">选择备份格式，导出文件将由服务端生成并保存到 D 盘运行目录。</p>
+        <div class="export-options">
+          <label><input type="radio" name="exportFormat" value="json" checked /><span><b>JSON 数据包</b><small>可再次导入，适合完整备份</small></span><em>JSON</em></label>
+          <label><input type="radio" name="exportFormat" value="png" /><span><b>PNG 图片</b><small>适合快速分享当前工作区</small></span><em>PNG</em></label>
+          <label><input type="radio" name="exportFormat" value="pdf" /><span><b>PDF 文档</b><small>适合归档和打印</small></span><em>PDF</em></label>
+        </div>
+        <div class="modal-actions"><button class="btn ghost" id="exportCancel">取消</button><button class="btn primary" id="exportConfirm">开始导出</button></div>
+      </div>
+    </div>
+
     <!-- ===================== 命令面板 ⌘K ===================== -->
     <div class="cmd-mask" id="cmdPalette">
       <div class="cmd">
@@ -114,23 +141,84 @@
 
     <!-- ===================== 设置中心 ===================== -->
     <div class="modal-mask" id="settingsModal">
-      <div class="modal">
+      <div class="modal settings-modal">
         <span class="modal-close" id="settingsClose">×</span>
-        <h3>设置</h3>
-        <p class="sub">偏好保存在本地（D 盘 / localStorage）</p>
-        <div class="set-row"><span>主题外观</span>
-          <select id="setTheme"><option value="light">浅色</option><option value="dark">深色</option></select>
+        <div class="settings-head"><h3>设置中心</h3><p class="sub">管理账号、工作区和本机偏好</p></div>
+        <div class="settings-layout">
+          <nav class="settings-nav">
+            <button class="active" data-settings-tab="account">账号资料</button>
+            <button data-settings-tab="appearance">外观体验</button>
+            <button data-settings-tab="workspace">工作区</button>
+            <button data-settings-tab="security">账号安全</button>
+          </nav>
+          <div class="settings-content">
+            <section class="settings-pane active" data-settings-pane="account">
+              <h4>账号资料</h4><p>更新在协作空间中显示的个人信息。</p>
+              <label class="field-label">显示名称<input id="profileName" maxlength="80" /></label>
+              <label class="field-label">登录邮箱<input id="profileEmail" readonly /></label>
+              <div class="pane-actions"><button class="btn primary" id="saveProfile">保存资料</button></div>
+            </section>
+            <section class="settings-pane" data-settings-pane="appearance">
+              <h4>外观体验</h4><p>这些偏好仅保存在当前浏览器。</p>
+              <div class="set-row"><span><b>主题外观</b><small>选择浅色或深色界面</small></span><select id="setTheme"><option value="light">浅色</option><option value="dark">深色</option></select></div>
+              <div class="set-row"><span><b>界面密度</b><small>调整列表和控件间距</small></span><select id="setDensity"><option>舒适</option><option>紧凑</option></select></div>
+              <div class="set-row"><span><b>AI 模型</b><small>网关异常时自动使用本地降级</small></span><select id="setModel"><option>deepseek-v4-pro</option><option>本地降级模型</option></select></div>
+              <label class="toggle-row"><span><b>减少动画</b><small>降低页面切换和弹窗动效</small></span><input type="checkbox" id="setReduceMotion" /></label>
+            </section>
+            <section class="settings-pane" data-settings-pane="workspace">
+              <h4>工作区设置</h4><p>配置当前工作区名称与本地存储信息。</p>
+              <label class="field-label">工作区名称<input id="workspaceNameInput" maxlength="120" /></label>
+              <label class="field-label">运行数据目录<input value="D:\WorkSpace-java\workbuddy\filehub\runtime" readonly /></label>
+              <div class="storage-status"><i></i><span><b>本地存储正常</b><small>SQLite、上传文件和导出均保存在 D 盘</small></span></div>
+              <div class="pane-actions"><button class="btn primary" id="saveWorkspace">保存工作区</button></div>
+              <div class="settings-divider"></div>
+              <h4>新建工作区</h4><p>为新的项目或团队创建独立资料空间。</p>
+              <label class="field-label">新工作区名称<input id="newWorkspaceName" maxlength="120" placeholder="例如：2026 产品规划" /></label>
+              <div class="pane-actions"><button class="btn ghost" id="createWorkspace">创建工作区</button></div>
+            </section>
+            <section class="settings-pane" data-settings-pane="security">
+              <h4>账号安全</h4><p>修改密码后，所有已有会话都会失效。</p>
+              <label class="field-label">当前密码<input type="password" id="currentPassword" autocomplete="current-password" /></label>
+              <label class="field-label">新密码<input type="password" id="newPassword" minlength="8" autocomplete="new-password" /></label>
+              <label class="field-label">确认新密码<input type="password" id="confirmPassword" minlength="8" autocomplete="new-password" /></label>
+              <div class="pane-actions"><button class="btn primary" id="changePassword">更新密码</button></div>
+            </section>
+          </div>
         </div>
-        <div class="set-row"><span>AI 模型</span>
-          <select id="setModel"><option>deepseek-v4-pro</option><option>本地降级模型</option></select>
+        <div class="modal-actions settings-footer"><button class="btn ghost" id="settingsCancel">关闭</button></div>
+      </div>
+    </div>
+
+    <!-- ===================== 登录 / 注册 ===================== -->
+    <div class="auth-screen" id="authScreen" aria-hidden="true">
+      <div class="auth-brand">
+        <div class="auth-mark">F</div>
+        <div><h1>FileHub</h1><p>把散落资料整理成可搜索、可关联、可协作的知识工作区。</p></div>
+        <div class="auth-preview"><span>工作区</span><strong>文档、标签与 AI，在同一个画布中。</strong><div><i></i><i></i><i></i></div></div>
+      </div>
+      <div class="auth-panel">
+        <div class="auth-box">
+          <div class="auth-mobile-logo">FileHub</div>
+          <h2 id="authTitle">登录</h2><p class="auth-sub" id="authSubtitle">继续进入你的知识工作区</p>
+          <form id="loginForm" class="auth-form">
+            <label>邮箱<input type="email" id="loginEmail" autocomplete="email" required placeholder="name@example.com" /></label>
+            <label>密码<input type="password" id="loginPassword" autocomplete="current-password" required placeholder="至少 8 位" /></label>
+            <div class="auth-error" id="loginError"></div>
+            <button class="btn primary auth-submit" type="submit">登录</button>
+            <button class="btn demo-submit" id="demoLogin" type="button">进入演示工作区</button>
+            <p class="auth-switch">还没有账号？<button type="button" data-auth-mode="register">创建账号</button></p>
+          </form>
+          <form id="registerForm" class="auth-form" hidden>
+            <label>显示名称<input id="registerName" maxlength="80" required placeholder="你的名字" /></label>
+            <label>邮箱<input type="email" id="registerEmail" autocomplete="email" required placeholder="name@example.com" /></label>
+            <label>密码<input type="password" id="registerPassword" minlength="8" autocomplete="new-password" required placeholder="至少 8 位" /></label>
+            <label>确认密码<input type="password" id="registerConfirm" minlength="8" autocomplete="new-password" required placeholder="再次输入密码" /></label>
+            <div class="auth-error" id="registerError"></div>
+            <button class="btn primary auth-submit" type="submit">创建账号</button>
+            <p class="auth-switch">已有账号？<button type="button" data-auth-mode="login">返回登录</button></p>
+          </form>
+          <p class="auth-foot">登录即表示你将使用本机 D 盘运行数据目录。</p>
         </div>
-        <div class="set-row"><span>存储路径</span>
-          <input value="D:\WorkSpace-java\workbuddy\filehub" readonly />
-        </div>
-        <div class="set-row"><span>界面密度</span>
-          <select id="setDensity"><option>舒适</option><option>紧凑</option></select>
-        </div>
-        <div class="modal-actions"><button class="btn ghost" id="settingsCancel">关闭</button></div>
       </div>
     </div>
 
@@ -180,14 +268,14 @@
   <!-- ===================== 脚本（按依赖顺序加载，全部 D 盘本地资源） ===================== -->
   <script src="js/data.js?v=5"></script>
   <script src="js/labdata.js?v=5"></script>
-  <script src="js/api.js?v=5"></script>
+  <script src="js/api.js?v=12"></script>
   <script src="js/ai.js?v=5"></script>
   <script src="js/router.js?v=5"></script>
   <script src="js/workspace.js?v=5"></script>
   <script src="js/detail.js?v=5"></script>
   <script src="js/features.js?v=6"></script>
   <script src="js/feature-api.js?v=6"></script>
-  <script src="js/app.js?v=8"></script>
+  <script src="js/app.js?v=12"></script>
   <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(function () {});</script>
 </body>
 </html>

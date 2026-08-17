@@ -92,8 +92,8 @@ window.App = window.App || {};
     localStorage.setItem("fh_sidebar_collapsed", appShell.classList.contains("sidebar-collapsed") ? "1" : "0");
   });
   if (localStorage.getItem("fh_sidebar_collapsed") === "1" || window.innerWidth < 760) appShell.classList.add("sidebar-collapsed");
-  document.getElementById("sbNewFile").addEventListener("click", function () { document.getElementById("uploadModal").classList.add("show"); });
   document.getElementById("sbAiChat").addEventListener("click", function () { App.router.go("#/lab/ai-chat"); });
+  document.getElementById("workspaceCreateBtn").addEventListener("click", function () { openSettings("workspace"); setTimeout(function () { document.getElementById("newWorkspaceName").focus(); }, 0); });
   document.getElementById("sbRefreshTags").addEventListener("click", function () { renderSidebarInsights(App.data.files, App.data.files.length); });
 
   function fileGroup(type) {
@@ -122,9 +122,28 @@ window.App = window.App || {};
     }
   }
 
-  // ---- 头像 ----
-  document.querySelector(".avatar").addEventListener("click", function () {
-    App.api.get("/auth/me").then(function (u) { App.toast(u.displayName + " · " + u.email); }).catch(function (e) { App.toast(e.message); });
+  // ---- 顶部收纳菜单与用户菜单 ----
+  var moreMenu = document.getElementById("moreMenu");
+  var userMenu = document.getElementById("userMenu");
+  var avatarBtn = document.getElementById("avatarBtn");
+  function initials(name) { return String(name || "U").trim().slice(0, 1).toUpperCase(); }
+  function setCurrentUser(user) {
+    App.currentUser = user;
+    var letter = initials(user && user.displayName);
+    avatarBtn.textContent = letter;
+    document.getElementById("userMenuAvatar").textContent = letter;
+    document.getElementById("userMenuName").textContent = (user && user.displayName) || "用户";
+    document.getElementById("userMenuEmail").textContent = (user && user.email) || "";
+  }
+  function closeMenus() { moreMenu.classList.remove("show"); userMenu.classList.remove("show"); }
+  document.getElementById("moreBtn").addEventListener("click", function (e) {
+    e.stopPropagation(); userMenu.classList.remove("show"); moreMenu.classList.toggle("show");
+  });
+  avatarBtn.addEventListener("click", function (e) {
+    e.stopPropagation(); moreMenu.classList.remove("show"); userMenu.classList.toggle("show");
+  });
+  document.addEventListener("click", function (e) {
+    if (!moreMenu.contains(e.target) && !userMenu.contains(e.target)) closeMenus();
   });
 
   // ---- 顶部导航 ----
@@ -260,7 +279,8 @@ window.App = window.App || {};
   }
   function openCmd() { cmdIndex = 0; cmdInput.value = ""; renderCmd(""); cmdMask.classList.add("show"); cmdInput.focus(); }
   function closeCmd() { cmdMask.classList.remove("show"); }
-  document.getElementById("cmdBtn").addEventListener("click", openCmd);
+  var cmdBtn = document.getElementById("cmdBtn");
+  if (cmdBtn) cmdBtn.addEventListener("click", openCmd);
   cmdMask.addEventListener("click", function (e) { if (e.target === cmdMask) closeCmd(); });
   cmdInput.addEventListener("input", function () { cmdIndex = 0; renderCmd(cmdInput.value); });
   cmdInput.addEventListener("keydown", function (e) {
@@ -311,13 +331,96 @@ window.App = window.App || {};
      必备功能 E5 · 设置中心
      =================================================================== */
   var settingsModal = document.getElementById("settingsModal");
-  function openSettings() { settingsModal.classList.add("show"); }
+  function openSettings(tab) {
+    closeMenus();
+    selectSettingsTab(tab || "account");
+    settingsModal.classList.add("show");
+    if (App.currentUser) {
+      document.getElementById("profileName").value = App.currentUser.displayName || "";
+      document.getElementById("profileEmail").value = App.currentUser.email || "";
+    }
+    document.getElementById("workspaceNameInput").value = App.workspaceName || "";
+  }
+  function selectSettingsTab(name) {
+    document.querySelectorAll("[data-settings-tab]").forEach(function (el) { el.classList.toggle("active", el.dataset.settingsTab === name); });
+    document.querySelectorAll("[data-settings-pane]").forEach(function (el) { el.classList.toggle("active", el.dataset.settingsPane === name); });
+  }
+  document.querySelectorAll("[data-settings-tab]").forEach(function (el) { el.addEventListener("click", function () { selectSettingsTab(el.dataset.settingsTab); }); });
   document.getElementById("settingsClose").addEventListener("click", function () { settingsModal.classList.remove("show"); });
   document.getElementById("settingsCancel").addEventListener("click", function () { settingsModal.classList.remove("show"); });
   settingsModal.addEventListener("click", function (e) { if (e.target === settingsModal) settingsModal.classList.remove("show"); });
   document.getElementById("setTheme").addEventListener("change", function (e) { applyTheme(e.target.value); });
   document.getElementById("setModel").addEventListener("change", function (e) { localStorage.setItem("fh_model_preference", e.target.value); App.toast("AI 模型偏好已保存：" + e.target.value); });
   document.getElementById("setDensity").addEventListener("change", function (e) { localStorage.setItem("fh_density", e.target.value); document.documentElement.dataset.density = e.target.value === "紧凑" ? "compact" : "comfortable"; });
+  document.getElementById("setReduceMotion").addEventListener("change", function (e) {
+    var value = e.target.checked ? "true" : "false";
+    localStorage.setItem("fh_reduce_motion", value); document.documentElement.dataset.reduceMotion = value;
+  });
+  document.getElementById("saveProfile").addEventListener("click", function () {
+    var name = document.getElementById("profileName").value.trim();
+    if (!name) { App.toast("显示名称不能为空"); return; }
+    App.api.patch("/auth/me", { displayName: name }).then(function (user) { setCurrentUser(user); App.toast("账号资料已保存"); }).catch(function (e) { App.toast("保存失败：" + e.message); });
+  });
+  document.getElementById("saveWorkspace").addEventListener("click", function () {
+    var name = document.getElementById("workspaceNameInput").value.trim();
+    if (!name || !App.remoteWorkspaceId) { App.toast("请输入工作区名称"); return; }
+    App.api.patch("/workspaces/" + App.remoteWorkspaceId, { name: name }).then(function (w) {
+      App.workspaceName = w.name || name;
+      var select = document.getElementById("workspaceSelect");
+      if (select.selectedIndex >= 0) select.options[select.selectedIndex].textContent = App.workspaceName;
+      App.router.resolve(); App.toast("工作区设置已保存");
+    }).catch(function (e) { App.toast("保存失败：" + e.message); });
+  });
+  document.getElementById("createWorkspace").addEventListener("click", function () {
+    var input = document.getElementById("newWorkspaceName"); var name = input.value.trim();
+    if (!name) { App.toast("请输入新工作区名称"); input.focus(); return; }
+    App.api.post("/workspaces", { name: name }).then(function (workspace) {
+      var select = document.getElementById("workspaceSelect"); var option = document.createElement("option");
+      option.value = workspace.id; option.textContent = workspace.name; select.appendChild(option); select.value = workspace.id;
+      App.remoteWorkspaceId = workspace.id; App.workspaceName = workspace.name; App.state.selectedId = null;
+      App.data.files = []; App.data.byId = {}; App.data.connections = []; renderSidebarInsights([], 0); App.router.resolve();
+      input.value = ""; settingsModal.classList.remove("show"); App.toast("已创建工作区：" + workspace.name);
+    }).catch(function (e) { App.toast("创建失败：" + e.message); });
+  });
+  document.getElementById("changePassword").addEventListener("click", function () {
+    var current = document.getElementById("currentPassword").value;
+    var next = document.getElementById("newPassword").value;
+    var confirm = document.getElementById("confirmPassword").value;
+    if (next.length < 8) { App.toast("新密码至少需要 8 位"); return; }
+    if (next !== confirm) { App.toast("两次输入的新密码不一致"); return; }
+    App.api.post("/auth/change-password", { currentPassword: current, newPassword: next }).then(function () {
+      settingsModal.classList.remove("show"); App.api.clearSession(); showAuth("login", "密码已更新，请重新登录");
+    }).catch(function (e) { App.toast("更新失败：" + e.message); });
+  });
+
+  (function initPreferences() {
+    var density = localStorage.getItem("fh_density") || "舒适";
+    document.getElementById("setDensity").value = density;
+    document.documentElement.dataset.density = density === "紧凑" ? "compact" : "comfortable";
+    var model = localStorage.getItem("fh_model_preference"); if (model) document.getElementById("setModel").value = model;
+    var reduced = localStorage.getItem("fh_reduce_motion") === "true";
+    document.getElementById("setReduceMotion").checked = reduced;
+    document.documentElement.dataset.reduceMotion = reduced ? "true" : "false";
+  })();
+
+  moreMenu.addEventListener("click", function (e) {
+    var item = e.target.closest("[data-action]"); if (!item) return;
+    closeMenus();
+    var action = item.dataset.action;
+    if (action === "command") openCmd();
+    else if (action === "export") doExport();
+    else if (action === "shortcuts") openShortcuts();
+    else if (action === "settings") openSettings("appearance");
+  });
+  userMenu.addEventListener("click", function (e) {
+    var item = e.target.closest("[data-action]"); if (!item) return;
+    closeMenus();
+    if (item.dataset.action === "profile") openSettings("account");
+    else if (item.dataset.action === "settings") openSettings("appearance");
+    else if (item.dataset.action === "logout") {
+      App.api.logout().then(function () { showAuth("login", "已安全退出登录"); });
+    }
+  });
 
   /* ===================================================================
      必备功能 E10 · 快捷键体系
@@ -404,9 +507,19 @@ window.App = window.App || {};
   /* ===================================================================
      必备功能 E9 · 导出 / 备份
      =================================================================== */
-  document.getElementById("exportBtn").addEventListener("click", doExport);
-  function doExport() {
-    var format = (window.prompt("导出格式：json / png / pdf", "json") || "json").toLowerCase();
+  var exportModal = document.getElementById("exportModal");
+  var exportBtn = document.getElementById("exportBtn");
+  if (exportBtn) exportBtn.addEventListener("click", doExport);
+  document.getElementById("exportClose").addEventListener("click", function () { exportModal.classList.remove("show"); });
+  document.getElementById("exportCancel").addEventListener("click", function () { exportModal.classList.remove("show"); });
+  exportModal.addEventListener("click", function (e) { if (e.target === exportModal) exportModal.classList.remove("show"); });
+  document.getElementById("exportConfirm").addEventListener("click", function () {
+    var selected = exportModal.querySelector('input[name="exportFormat"]:checked');
+    exportModal.classList.remove("show"); doExport(selected ? selected.value : "json");
+  });
+  function doExport(format) {
+    if (!format) { closeMenus(); exportModal.classList.add("show"); return; }
+    format = String(format).toLowerCase();
     if (["json", "png", "pdf"].indexOf(format) < 0) { App.toast("不支持的导出格式"); return; }
     if (!App.remoteWorkspaceId) { App.toast("工作区尚未加载"); return; }
     App.api.post("/workspaces/" + App.remoteWorkspaceId + "/export", { format: format }).then(function (x) {
@@ -457,7 +570,7 @@ window.App = window.App || {};
     if (meta && (e.key === "k" || e.key === "K")) { e.preventDefault(); openCmd(); return; }
     if (e.key === "?" && !meta) { e.preventDefault(); openShortcuts(); return; }
     if (e.key === "Escape") {
-      [cmdMask, settingsModal, shortcutsModal, trashModal, notifPanel, modal].forEach(function (m) { m.classList.remove("show"); });
+      [cmdMask, settingsModal, shortcutsModal, trashModal, exportModal, notifPanel, modal].forEach(function (m) { m.classList.remove("show"); });
       return;
     }
     // 撤销 / 重做（仅在工作区视图）
@@ -468,9 +581,55 @@ window.App = window.App || {};
     }
   });
 
+  // ---- 真实认证入口 ----
+  var authScreen = document.getElementById("authScreen");
+  var loginForm = document.getElementById("loginForm");
+  var registerForm = document.getElementById("registerForm");
+  function setAuthMode(mode) {
+    var registering = mode === "register";
+    loginForm.hidden = registering; registerForm.hidden = !registering;
+    document.getElementById("authTitle").textContent = registering ? "创建账号" : "登录";
+    document.getElementById("authSubtitle").textContent = registering ? "创建你的第一个 FileHub 工作区" : "继续进入你的知识工作区";
+    document.getElementById("loginError").textContent = ""; document.getElementById("registerError").textContent = "";
+  }
+  function showAuth(mode, message) {
+    closeMenus(); setAuthMode(mode || "login");
+    if (message) document.getElementById("authSubtitle").textContent = message;
+    authScreen.classList.add("show"); authScreen.setAttribute("aria-hidden", "false");
+    App.remoteWorkspaceId = null; App.currentUser = null;
+  }
+  function hideAuth() { authScreen.classList.remove("show"); authScreen.setAttribute("aria-hidden", "true"); }
+  function authSuccess(session) {
+    setCurrentUser(session.user); hideAuth();
+    return loadWorkspaceData().then(function () { startOnboard(); });
+  }
+  document.querySelectorAll("[data-auth-mode]").forEach(function (button) { button.addEventListener("click", function () { setAuthMode(button.dataset.authMode); }); });
+  loginForm.addEventListener("submit", function (e) {
+    e.preventDefault(); var error = document.getElementById("loginError"); error.textContent = "";
+    var submit = loginForm.querySelector('[type="submit"]'); submit.disabled = true; submit.textContent = "正在登录…";
+    App.api.login(document.getElementById("loginEmail").value.trim(), document.getElementById("loginPassword").value)
+      .then(authSuccess).catch(function (err) { error.textContent = err.message === "invalid credentials" ? "邮箱或密码不正确" : err.message; })
+      .finally(function () { submit.disabled = false; submit.textContent = "登录"; });
+  });
+  registerForm.addEventListener("submit", function (e) {
+    e.preventDefault(); var error = document.getElementById("registerError"); error.textContent = "";
+    var password = document.getElementById("registerPassword").value;
+    if (password !== document.getElementById("registerConfirm").value) { error.textContent = "两次输入的密码不一致"; return; }
+    var submit = registerForm.querySelector('[type="submit"]'); submit.disabled = true; submit.textContent = "正在创建…";
+    App.api.register(document.getElementById("registerEmail").value.trim(), password, document.getElementById("registerName").value.trim())
+      .then(authSuccess).catch(function (err) { error.textContent = err.message === "email already exists" ? "该邮箱已经注册" : err.message; })
+      .finally(function () { submit.disabled = false; submit.textContent = "创建账号"; });
+  });
+  document.getElementById("demoLogin").addEventListener("click", function () {
+    var button = this; button.disabled = true; button.textContent = "正在准备演示数据…";
+    App.api.demoAuth().then(authSuccess).catch(function (err) { document.getElementById("loginError").textContent = err.message; })
+      .finally(function () { button.disabled = false; button.textContent = "进入演示工作区"; });
+  });
+  window.addEventListener("filehub:auth-required", function () { showAuth("login", "会话已过期，请重新登录"); });
+
   // ---- 注册路由并启动 ----
   function closeOverlays() {
-    [cmdMask, settingsModal, shortcutsModal, trashModal, notifPanel].forEach(function (m) { m.classList.remove("show"); });
+    [cmdMask, settingsModal, shortcutsModal, trashModal, exportModal, notifPanel].forEach(function (m) { m.classList.remove("show"); });
   }
   function mountView(fn) {
     var view = document.getElementById("view");
@@ -519,7 +678,6 @@ window.App = window.App || {};
       return first;
     }).then(function (res) {
       var files = (res && res.items) || [];
-      if (!files.length) return;
       App.data.files = files.map(mapRemoteFile);
       if (App.data.files.length > 30) {
         App.data.files.forEach(function (f, i) { f.x = 24 + (i % 5) * 164; f.y = 120 + Math.floor(i / 5) * 112; });
@@ -557,24 +715,26 @@ window.App = window.App || {};
     }).catch(function () { /* offline: keep local state */ });
   };
 
-  if (App.api) {
-    App.api.demoAuth()
-      .then(function () { return App.api.get("/workspaces"); })
-      .then(function (res) {
-        var workspaces = (res && res.items) || [];
-        if (!workspaces.length) return;
-        var select = document.getElementById("workspaceSelect"); select.innerHTML = "";
-        workspaces.forEach(function (w) { var option = document.createElement("option"); option.value = w.id; option.textContent = w.name; select.appendChild(option); });
-        App.remoteWorkspaceId = workspaces[0].id; App.workspaceName = workspaces[0].name;
-        select.value = App.remoteWorkspaceId;
-        select.addEventListener("change", function () {
-          App.remoteWorkspaceId = select.value; App.workspaceName = select.options[select.selectedIndex].textContent;
-          App.state.selectedId = null; App.data.connections = [];
-          syncRemoteFiles().then(syncRemoteCanvas).then(function () { App.toast("已切换到 " + App.workspaceName); });
-        });
-        return syncRemoteFiles().then(syncRemoteCanvas);
-      })
-      .catch(function () { /* offline mode intentionally keeps seed data */ });
+  function loadWorkspaceData() {
+    return Promise.all([App.api.get("/auth/me"), App.api.get("/workspaces")]).then(function (result) {
+      setCurrentUser(result[0]);
+      var workspaces = (result[1] && result[1].items) || [];
+      if (!workspaces.length) throw new Error("账号暂无可用工作区");
+      var select = document.getElementById("workspaceSelect"); select.innerHTML = "";
+      workspaces.forEach(function (w) { var option = document.createElement("option"); option.value = w.id; option.textContent = w.name; select.appendChild(option); });
+      App.remoteWorkspaceId = workspaces[0].id; App.workspaceName = workspaces[0].name; select.value = App.remoteWorkspaceId;
+      select.onchange = function () {
+        App.remoteWorkspaceId = select.value; App.workspaceName = select.options[select.selectedIndex].textContent;
+        App.state.selectedId = null; App.data.connections = [];
+        syncRemoteFiles().then(syncRemoteCanvas).then(function () { App.toast("已切换到 " + App.workspaceName); });
+      };
+      return syncRemoteFiles().then(syncRemoteCanvas);
+    });
   }
-  startOnboard();
+
+  if (App.api && App.api.hasSession()) {
+    loadWorkspaceData().then(function () { startOnboard(); }).catch(function () { App.api.clearSession(); showAuth("login", "会话已失效，请重新登录"); });
+  } else {
+    showAuth("login");
+  }
 })();
