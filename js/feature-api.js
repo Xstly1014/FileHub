@@ -95,7 +95,7 @@
   });
 
   override("health", function (area) {
-    var out = list(area), info = status(area, "计算新鲜度、关联度与完整度…"); wsid().then(function (id) { return App.api.get("/workspaces/" + id + "/health"); }).then(function (x) { out.innerHTML = ""; (x.items || []).slice(0, 60).forEach(function (v) { card(out, v.id, "综合 " + v.score + " · 新鲜 " + v.fresh + " · 关联 " + v.link + " · 完整 " + v.complete); }); info.textContent = "已计算 " + x.items.length + " 个文件"; });
+    var out = list(area), info = status(area, "计算新鲜度、关联度与完整度…"); wsid().then(function (id) { return App.api.get("/workspaces/" + id + "/health"); }).then(function (x) { out.innerHTML = ""; (x.items || []).slice(0, 60).forEach(function (v) { card(out, v.id, "综合 " + v.score + " · 新鲜 " + v.fresh + " · 关联 " + v.link + " · 完整 " + v.complete); }); info.textContent = "已计算 " + x.items.length + " 个文件"; }).catch(function () { info.textContent = "健康度服务暂时不可用，请稍后重试"; empty(out, "当前无法读取健康度数据"); });
   });
 
   override("presence", function (area) {

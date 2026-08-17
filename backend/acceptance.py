@@ -172,7 +172,7 @@ def c20():
     snap = call("GET", f"/sync/snapshot?workspaceId={temp_ws}")
     synced = call("POST", "/sync/changes", json={"workspaceId": temp_ws, "changes": []})
     manifest = call("GET", "/pwa/manifest")
-    assert snap["files"] and synced["accepted"] == 0 and "serviceWorker" in manifest and "filehub-shell-v12" in sw
+    assert snap["files"] and synced["accepted"] == 0 and "serviceWorker" in manifest and "filehub-shell-v17" in sw
     return "snapshot/sync/service-worker"
 check("C20", "PWA 离线同步", c20)
 

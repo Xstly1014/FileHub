@@ -21,8 +21,9 @@
 - [ ] AI 流式 SSE 已提供 `/ai/chat/stream`，前端 UI 尚未接流式渲染。
 - [ ] PDF/DOCX/图片的解析（OCR / 文档抽取），上传后进入异步解析队列。
 - [ ] 多用户工作区成员/权限模型（当前 workspaces 单用户独占）。
-- [ ] 前端真实登录/注册/登出页（当前沿用 demo 账号静默注册）。
-- [ ] 通知中心 UI 与后端 `/notifications` 打通（后端已产生通知，前端面板仍用演示数据）。
+- [x] 前端真实登录/注册/登出页及账号设置。
+- [x] 通知中心 UI 与后端 `/notifications` 打通。
+- [ ] 按 `docs/WORKSPACE_REDESIGN.md` 迁移 React + TypeScript + React Flow，并支持多个命名画布。
 - [ ] 操作审计 UI、配额/存储限额、prometheus 指标、CI（lint/test）。
 - [ ] 回收站 TTL 自动清理已实现（`purge_expired_trash`，默认 30 天，启动时执行）。
 

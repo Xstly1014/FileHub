@@ -10,16 +10,25 @@ App.views.detail = function (container, params) {
   var id = params[0];
   var f = D.byId[id] || D.files[0];
   App.workspaceApplySearch = null; // 离开工作区，解除搜索钩子
+  if (!f) {
+    container.innerHTML = '<div class="cmd-empty">文件尚未加载，请返回工作区后重试</div>';
+    return;
+  }
+  f.content = typeof f.content === "string" ? f.content : "";
+  f.tags = Array.isArray(f.tags) ? f.tags : [];
+  f.typeLabel = f.typeLabel || f.type || "FILE";
+  f.size = f.size || "0 B";
+  f.updated = f.updated || f.updatedAt || "";
 
   // ---- 简易 Markdown 渲染（预览态） ----
   function escapeHtml(s) {
-    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
   function inline(s) {
     return escapeHtml(s).replace(/`([^`]+)`/g, '<code class="inline">$1</code>');
   }
   function renderMarkdown(md) {
-    var lines = md.split("\n");
+    var lines = String(md || "").split("\n");
     var html = "", inCode = false, code = "";
     for (var i = 0; i < lines.length; i++) {
       var line = lines[i];
@@ -37,7 +46,7 @@ App.views.detail = function (container, params) {
     return html;
   }
   function toc(md) {
-    var items = [], lines = md.split("\n");
+    var items = [], lines = String(md || "").split("\n");
     for (var i = 0; i < lines.length; i++) {
       var m = lines[i].match(/^(#{1,2})\s+(.*)$/);
       if (m) items.push({ text: m[2], level: m[1].length });
@@ -79,15 +88,26 @@ App.views.detail = function (container, params) {
   dpMeta.textContent = "类型：" + f.typeLabel + "\n大小：" + f.size + "\n更新：" + f.updated +
     "\n标签：" + f.tags.map(function (t) { return t.t; }).join(" / ");
 
-  // 目录
-  var tocItems = toc(f.content);
-  dpToc.innerHTML = tocItems.map(function (t, i) {
-    return '<a data-i="' + i + '" style="' + (t.level === 2 ? "padding-left:12px;" : "") + '">' + t.text + "</a>";
-  }).join("");
+  var activeTab = "preview";
+  function renderToc() {
+    var tocItems = toc(f.content);
+    dpToc.innerHTML = tocItems.length ? tocItems.map(function (t, i) {
+      return '<a data-i="' + i + '" style="' + (t.level === 2 ? "padding-left:12px;" : "") + '">' + escapeHtml(t.text) + "</a>";
+    }).join("") : '<span class="dp-empty">暂无目录</span>';
+    dpToc.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () {
+        switchTab("preview");
+        App.toast("已定位：" + a.textContent);
+      });
+    });
+  }
+  renderToc();
 
   // ---- 三个标签页内容 ----
   function renderPreview() {
-    docScroll.innerHTML = '<div class="md">' + renderMarkdown(f.content) + "</div>";
+    docScroll.innerHTML = f.content
+      ? '<div class="md">' + renderMarkdown(f.content) + "</div>"
+      : '<div class="cmd-empty">正文加载中…</div>';
   }
   function renderEdit() {
     docScroll.innerHTML =
@@ -170,6 +190,7 @@ App.views.detail = function (container, params) {
   // ---- 标签切换 ----
   var tabs = container.querySelectorAll(".tb-tab");
   function switchTab(name) {
+    activeTab = name;
     tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.tab === name); });
     if (name === "preview") renderPreview();
     else if (name === "edit") renderEdit();
@@ -180,18 +201,23 @@ App.views.detail = function (container, params) {
     t.addEventListener("click", function () { switchTab(t.dataset.tab); });
   });
 
-  // 目录点击 -> 切到预览态并滚动（简易：提示）
-  dpToc.querySelectorAll("a").forEach(function (a) {
-    a.addEventListener("click", function () {
-      switchTab("preview");
-      App.toast("已定位：" + a.textContent);
-    });
-  });
-
   container.querySelector("#backBtn").addEventListener("click", function () {
     App.router.go("#/");
   });
 
   // 默认预览态
   switchTab("preview");
+
+  var remote = App.api && f.id && f.id.indexOf("file_") === 0;
+  if (remote) {
+    App.api.get("/files/" + f.id + "/content").then(function (result) {
+      if (!document.contains(container)) return;
+      f.content = (result && result.content) || "";
+      renderToc();
+      if (activeTab === "preview") renderPreview();
+    }).catch(function () {
+      if (!document.contains(container) || activeTab !== "preview" || f.content) return;
+      docScroll.innerHTML = '<div class="cmd-empty">正文暂时无法加载，请稍后重试</div>';
+    });
+  }
 };

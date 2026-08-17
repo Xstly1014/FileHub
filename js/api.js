@@ -8,7 +8,9 @@
    =================================================================== */
 window.App = window.App || {};
 App.api = (function () {
-  var base = window.FILEHUB_API_BASE || "http://127.0.0.1:8787";
+  // Docker deployments use the same-origin Nginx gateway; FILEHUB_API_BASE
+  // remains available for standalone backend development.
+  var base = window.FILEHUB_API_BASE || window.location.origin;
   var API = base.replace(/\/$/, "") + "/api/v1";
 
   function auth() { return localStorage.getItem("fh_access") || ""; }

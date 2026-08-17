@@ -11,7 +11,9 @@ window.App = window.App || {};
   // ---- 全局状态 ----
   App.state = {
     filter: { kind: "all" },
-    selectedId: null
+    selectedId: null,
+    workspaceMode: "overview",
+    workspaceSearch: ""
   };
   App.trash = [];                 // 回收站（被删节点）
   App._cleanup = null;            // 当前视图的清理函数
@@ -48,6 +50,7 @@ window.App = window.App || {};
 
   function applyFilter(kind, value, navEl) {
     App.state.filter = value ? { kind: kind, value: value } : { kind: kind };
+    App.state.workspaceMode = "library";
     App.state.selectedId = null;
     clearNavActive(); clearTagActive(); clearTypeActive();
     if (navEl && navEl.classList.contains("sb-nav")) {
@@ -82,7 +85,9 @@ window.App = window.App || {};
   // ---- 顶部搜索 ----
   var searchInput = document.getElementById("globalSearch");
   searchInput.addEventListener("input", function () {
-    if (App.workspaceApplySearch) App.workspaceApplySearch(searchInput.value.trim());
+    var query = searchInput.value.trim();
+    if (App.workspaceApplySearch) App.workspaceApplySearch(query);
+    else if (query) { App.state.workspaceMode = "library"; App.state.workspaceSearch = query; App.router.go("#/"); }
   });
 
   // ---- 工作区侧边栏增强 ----
@@ -378,6 +383,7 @@ window.App = window.App || {};
       var select = document.getElementById("workspaceSelect"); var option = document.createElement("option");
       option.value = workspace.id; option.textContent = workspace.name; select.appendChild(option); select.value = workspace.id;
       App.remoteWorkspaceId = workspace.id; App.workspaceName = workspace.name; App.state.selectedId = null;
+      App.state.workspaceMode = "overview";
       App.data.files = []; App.data.byId = {}; App.data.connections = []; renderSidebarInsights([], 0); App.router.resolve();
       input.value = ""; settingsModal.classList.remove("show"); App.toast("已创建工作区：" + workspace.name);
     }).catch(function (e) { App.toast("创建失败：" + e.message); });
@@ -650,7 +656,6 @@ window.App = window.App || {};
   App.router.add("/lab/:id", function (params) { mountView(function (v) { App.features.renderFeature(v, params[0]); }); });
 
   renderNotif();
-  App.router.start();
 
   // ---- 后端同步（信封解包 + 标签数组 + 画布） ----
   function mapRemoteFile(f, i) {
@@ -679,9 +684,6 @@ window.App = window.App || {};
     }).then(function (res) {
       var files = (res && res.items) || [];
       App.data.files = files.map(mapRemoteFile);
-      if (App.data.files.length > 30) {
-        App.data.files.forEach(function (f, i) { f.x = 24 + (i % 5) * 164; f.y = 120 + Math.floor(i / 5) * 112; });
-      }
       App.data.byId = {};
       App.data.files.forEach(function (f) { App.data.byId[f.id] = f; });
       renderSidebarInsights(App.data.files, res.total);
@@ -692,11 +694,19 @@ window.App = window.App || {};
   function syncRemoteCanvas() {
     if (!App.api || !App.remoteWorkspaceId) return Promise.resolve();
     return App.api.get("/workspaces/" + App.remoteWorkspaceId + "/canvas").then(function (canvas) {
-      if (App.data.files.length <= 30 && canvas && canvas.nodes && canvas.nodes.length) {
+      if (canvas && canvas.nodes && canvas.nodes.length) {
         var pos = {};
         canvas.nodes.forEach(function (n) { pos[n.id] = { x: n.x, y: Math.max(112, n.y) }; });
         App.data.files.forEach(function (f) { if (pos[f.id]) { f.x = pos[f.id].x; f.y = pos[f.id].y; } });
       }
+      var savedIds = canvas && canvas.nodes ? canvas.nodes.map(function (n) { return n.id; }).filter(function (id) { return !!App.data.byId[id]; }) : [];
+      if (savedIds.length > 40) {
+        savedIds = App.data.files.filter(function (f) { return f.favorite; }).slice(0, 12).map(function (f) { return f.id; });
+        if (!savedIds.length) savedIds = App.data.files.slice(0, 8).map(function (f) { return f.id; });
+        savedIds.forEach(function (id, index) { App.data.byId[id].x = 70 + (index % 4) * 250; App.data.byId[id].y = 80 + Math.floor(index / 4) * 160; });
+      }
+      if (!savedIds.length) savedIds = App.data.files.filter(function (f) { return f.favorite; }).slice(0, 8).map(function (f) { return f.id; });
+      App.canvasNodeIds = savedIds;
       if (canvas && canvas.connections && canvas.connections.length) {
         App.data.connections = canvas.connections.map(function (p) { return [p[0], p[1]]; });
       }
@@ -707,8 +717,9 @@ window.App = window.App || {};
   // Expose canvas persistence for the workspace view.
   App.persistCanvas = function () {
     if (!App.api || !App.remoteWorkspaceId) return Promise.resolve();
-    var nodes = App.data.files.map(function (f) { return { id: f.id, x: f.x, y: f.y }; });
-    var connections = (App.data.connections || []).map(function (p) { return [p[0], p[1]]; });
+    var ids = Array.isArray(App.canvasNodeIds) ? App.canvasNodeIds : [];
+    var nodes = ids.map(function (id) { return App.data.byId[id]; }).filter(Boolean).map(function (f) { return { id: f.id, x: f.x, y: f.y }; });
+    var connections = (App.data.connections || []).filter(function (p) { return ids.indexOf(p[0]) >= 0 && ids.indexOf(p[1]) >= 0; }).map(function (p) { return [p[0], p[1]]; });
     return App.api.get("/workspaces/" + App.remoteWorkspaceId + "/canvas").then(function (cur) {
       var revision = (cur && cur.revision) || 0;
       return App.api.put("/workspaces/" + App.remoteWorkspaceId + "/canvas", { revision: revision, nodes: nodes, connections: connections, viewport: {} });
@@ -725,7 +736,7 @@ window.App = window.App || {};
       App.remoteWorkspaceId = workspaces[0].id; App.workspaceName = workspaces[0].name; select.value = App.remoteWorkspaceId;
       select.onchange = function () {
         App.remoteWorkspaceId = select.value; App.workspaceName = select.options[select.selectedIndex].textContent;
-        App.state.selectedId = null; App.data.connections = [];
+        App.state.selectedId = null; App.state.workspaceMode = "overview"; App.data.connections = []; App.canvasNodeIds = [];
         syncRemoteFiles().then(syncRemoteCanvas).then(function () { App.toast("已切换到 " + App.workspaceName); });
       };
       return syncRemoteFiles().then(syncRemoteCanvas);
@@ -733,8 +744,16 @@ window.App = window.App || {};
   }
 
   if (App.api && App.api.hasSession()) {
-    loadWorkspaceData().then(function () { startOnboard(); }).catch(function () { App.api.clearSession(); showAuth("login", "会话已失效，请重新登录"); });
+    loadWorkspaceData().then(function () {
+      App.router.start();
+      startOnboard();
+    }).catch(function () {
+      App.router.start();
+      App.api.clearSession();
+      showAuth("login", "会话已失效，请重新登录");
+    });
   } else {
+    App.router.start();
     showAuth("login");
   }
 })();
